@@ -1,30 +1,45 @@
-import React, { useState } from 'react';
-import { NextPage } from 'next';
-import { Box, Button, Flex , Link } from '@chakra-ui/core';
-import { Formik, Form } from 'formik';
-import { toErrorMap } from '../../utils/toErrorMap';
-import InputField from '../../components/InputField';
-import login from '../login';
-import { useChangePasswordMutation } from '../../generated/graphql';
-import { useRouter } from 'next/router';
-import { createUrqlClient } from '../../utils/createUrqlClient';
-import { withUrqlClient } from 'next-urql';
+import { Box, Button, Flex, Link } from "@chakra-ui/core";
+import { Form, Formik } from "formik";
+import { NextPage } from "next";
 import NextLink from 'next/link';
+import { useRouter } from "next/router";
+import React, { useState } from "react";
+import InputField from "../../components/InputField";
 import { NavBar } from '../../components/NavBar';
+import {
+  MeQuery,
+  useChangePasswordMutation,
+  MeDocument,
+} from "../../generated/graphql";
+import { toErrorMap } from "../../utils/toErrorMap";
+import { withApollo } from "../../utils/withApollo";
 
 const ChangePassword: NextPage<{ token: string }> = ({ }) => {
     const router = useRouter();
     const [tokenError, setTokenError] = useState('');
-    const [,changePassword] = useChangePasswordMutation();
+    const [changePassword] = useChangePasswordMutation();
     return (
         <>
             <NavBar/>
             <Formik initialValues={{ newPassword:"" }}
             onSubmit={async (values, { setErrors }) => {
                 const response = await changePassword({
-                    newPassword : values.newPassword,
+                  variables: {
+                    newPassword: values.newPassword,
                     token:
-                    typeof router.query.token === 'string' ? router.query.token : ""
+                      typeof router.query.token === "string"
+                        ? router.query.token
+                        : "",
+                  },
+                  update: (cache, { data }) => {
+                    cache.writeQuery<MeQuery>({
+                      query: MeDocument,
+                      data: {
+                        __typename: "Query",
+                        me: data?.changePassword.user,
+                      },
+                    });
+                  },
                 });
                 if (response.data?.changePassword.errors) {
                     const errorMap = toErrorMap(response.data.changePassword.errors);
@@ -79,4 +94,4 @@ const ChangePassword: NextPage<{ token: string }> = ({ }) => {
 }
 
 
-export default withUrqlClient(createUrqlClient)(ChangePassword);
+export default withApollo({ ssr: false })(ChangePassword);

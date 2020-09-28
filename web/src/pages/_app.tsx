@@ -1,18 +1,22 @@
-import {Box, CSSReset, ThemeProvider } from '@chakra-ui/core';
-import { Provider } from 'urql';
+import {
+  ColorModeProvider,
+  CSSReset,
+  ThemeProvider
+} from "@chakra-ui/core";
+import React, { useState } from "react";
 import theme from '../theme';
 
+
+
+
 function MyApp({ Component, pageProps }: any) {
+  
   return (
     <ThemeProvider theme={theme}>
-      {/* <ColorModeProvider> */}
         <CSSReset />
-      <Box backgroundColor={"red"}>
-        <Component {...pageProps} />
-        </Box>
-        {/* </ColorModeProvider> */}
-      </ThemeProvider>
-  )
+          <Component {...pageProps} />
+    </ThemeProvider>
+  );
 }
 
 export default MyApp

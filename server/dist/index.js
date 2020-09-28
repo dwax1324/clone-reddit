@@ -42,10 +42,13 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         migrations: [path_1.default.join(__dirname, "./migrations/*")],
     });
     const app = express_1.default();
+    app.set("trust proxy", 1);
     const RedisStore = connect_redis_1.default(express_session_1.default);
     const redis = new ioredis_1.default(process.env.REDIS_URL);
-    app.set('proxy', 1);
-    app.use(express_session_1.default({
+    app.use(cors_1.default({
+        credentials: true,
+        origin: ["http://localhost:3000", "https://clone-reddit.vercel.app"],
+    }), express_session_1.default({
         name: constants_1.COOKIE_NAME,
         store: new RedisStore({
             client: redis,
@@ -54,27 +57,26 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         cookie: {
             maxAge: 1000 * 60 * 60 * 24 * 365 * 10,
             httpOnly: true,
-            sameSite: 'lax',
+            sameSite: "lax",
             secure: constants_1.__prod__,
-            domain: constants_1.__prod__ ? ".woojong.xyz" : undefined
+            domain: constants_1.__prod__ ? ".woojong.xyz" : ""
         },
         saveUninitialized: false,
         secret: process.env.SESSION_SECRET,
         resave: false,
-    }), cors_1.default({
-        credentials: true,
-        origin: process.env.CORS_ORIGIN
     }));
-    console.log(process.env.CORS_ORIGIN);
     const apolloServer = new apollo_server_express_1.ApolloServer({
         schema: yield type_graphql_1.buildSchema({
             resolvers: [hello_1.HelloResolver, post_1.PostResolver, user_1.UserResolver],
-            validate: false
+            validate: false,
         }),
         context: ({ req, res }) => ({
-            req, res, redis, userLoader: createUserLoader_1.createUserLoader(),
-            updootLoader: createUpdootLoader_1.createUpdootLoader()
-        })
+            req,
+            res,
+            redis,
+            userLoader: createUserLoader_1.createUserLoader(),
+            updootLoader: createUpdootLoader_1.createUpdootLoader(),
+        }),
     });
     apolloServer.applyMiddleware({
         app,

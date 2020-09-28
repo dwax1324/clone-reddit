@@ -67,7 +67,6 @@ const cursorPagination = (): Resolver => {
       results.push(...data);
     });
 
-    // console.log(results);
     return {
       __typename: "PaginatedPosts",
       hasMore,
@@ -81,7 +80,6 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
   if (isServer()) {
     cookie = ctx?.req?.headers?.cookie;
   }
-  console.log(process.env.NEXT_PUBLIC_API_URL);
   return {
     url: process.env.NEXT_PUBLIC_API_URL as string,
     fetchOptions: {

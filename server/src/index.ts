@@ -23,86 +23,81 @@ import { UserResolver } from './resolver/user';
 import { createUpdootLoader } from './utils/createUpdootLoader';
 import { createUserLoader } from './utils/createUserLoader';
 
+
+const isDevMode = process.env.NODE_ENV === "development";
 const main = async () => {
+  const connection = await createConnection({
+    type: "postgres",
+    url: process.env.DATABASE_URL,
+    entities: [Post, User, Updoot],
+    synchronize: false,
+    logging: true,
+    migrations: [path.join(__dirname, "./migrations/*")],
+  });
+  // await Post.delete({});
+  // await User.delete({});
+  // await Updoot.delete({});
+  // await connection.runMigrations();
+  // await Post.delete({})
+  // mikroORM이 sql에서  migrate안된 것을 migrate해준다.
 
-    const connection = await createConnection({
-      type: "postgres",
-      url:process.env.DATABASE_URL,
-      entities: [Post, User, Updoot],
-      synchronize: false,
-      logging: true,
-      migrations: [path.join(__dirname, "./migrations/*")],
-    });
-    // User.delete({});
-    // Post.delete({});
-    // Updoot.delete({});
-    // connection.runMigrations();
-    // await Post.delete({})
-    // mikroORM이 sql에서  migrate안된 것을 migrate해준다.
-
-    const app = express();
-    //req대신 _ (req를 쓰지 않겠다는 practice)
-
-    // app.use(cors());
-    // app.use(bodyParser.json());
+  const app = express();
+  //req대신 _ (req를 쓰지 않겠다는 practice)
+  
+  if (!isDevMode) {
+    app.set("trust proxy", 1);
+  }
 
 
-    //세션 (미들웨어 위에 놓아야함)
-    const RedisStore = connectRedis(session);
-    const redis = new Redis(process.env.REDIS_URL);
-
-    app.set('proxy', 1);
-    
-    
-    app.use(
-        session({
-        name: COOKIE_NAME,
-            store: new RedisStore({
-                client: redis,
-                disableTouch:true,
-        }),
-            cookie: {
-                maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10years
-                httpOnly: true,
-                sameSite: 'lax', //csrf
-                secure: __prod__, //cookie only works in https,
-                domain: __prod__  ? ".woojong.xyz": undefined
-            },
-        saveUninitialized: false,
-        secret: process.env.SESSION_SECRET,
-        resave: false,
-        }),
-        cors({
-        credentials: true,
-            origin: process.env.CORS_ORIGIN
-        })
-    )
-    console.log(process.env.CORS_ORIGIN);
-    const apolloServer = new ApolloServer({
-        schema: await buildSchema({
-            resolvers: [HelloResolver, PostResolver, UserResolver],
-            validate: false
-        }),
-        // context -> resolver에 access가능한 객체
-        context: ({ req, res }) => ({
-            req, res, redis, userLoader: createUserLoader(),
-            updootLoader: createUpdootLoader()
-        })
-        
+  //세션 (미들웨어 위에 놓아야함)
+  const RedisStore = connectRedis(session);
+  const redis = new Redis(process.env.REDIS_URL);
+  app.use(
+    cors({
+      credentials: true,
+      origin: ["http://localhost:3000", "https://clone-reddit.vercel.app"],
+    }),
+    session({
+      name: COOKIE_NAME,
+      store: new RedisStore({
+        client: redis,
+        disableTouch: true,
+      }),
+      cookie: {
+        sameSite: true,
+        maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10years
+        httpOnly: true,
+        domain: __prod__ ? ".woojong.xyz" : "",
+        secure:!isDevMode
+      },
+      saveUninitialized: false,
+      secret: process.env.SESSION_SECRET,
+      resave: false,
     })
+  );
+  const apolloServer = new ApolloServer({
+    schema: await buildSchema({
+      resolvers: [HelloResolver, PostResolver, UserResolver],
+      validate: false,
+    }),
+    // context -> resolver에 access가능한 객체
+    context: ({ req, res }) => ({
+      req,
+      res,
+      redis,
+      userLoader: createUserLoader(),
+      updootLoader: createUpdootLoader(),
+    }),
+  });
 
-    apolloServer.applyMiddleware({
-        app,
-        cors: false
-    });
-    app.listen(parseInt(process.env.PORT), () => {
-        console.log(`listening on : ${process.env.PORT}`)
-    })
-    
+  apolloServer.applyMiddleware({
+    app,
+    cors:false
+  });
+  app.listen(parseInt(process.env.PORT), () => {
+    console.log(`listening on : ${process.env.PORT}`);
+  });
 
-    // const llpost = orm.em.create(Post, { title:"qweeqqweqwwerqw"});
-    // await orm.em.persistAndFlush(post);
-    // await orm.em.nativeInsert(llpost)
 }
 
 main().catch(err => console.error(err));

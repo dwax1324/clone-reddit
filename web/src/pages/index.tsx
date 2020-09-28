@@ -1,24 +1,21 @@
-import React, { useState } from "react";
-import { withUrqlClient } from "next-urql";
-import { createUrqlClient } from "../utils/createUrqlClient";
-import { usePostsQuery } from "../generated/graphql";
-import { Box, Heading, Link, Stack, Text, Flex, Button } from "@chakra-ui/core";
-import Layout from "../components/Layout";
+import { Box, Button, Flex, Heading, Link, Stack, Text } from "@chakra-ui/core";
 import NextLink from "next/link";
-import { UpdootSection } from "../components/UpdootSection";
+import React, { useState } from "react";
 import EditDeletePostButtons from "../components/EditDeletePostButtons";
+import Layout from "../components/Layout";
+import { UpdootSection } from "../components/UpdootSection";
+import { PostQuery, usePostsQuery } from "../generated/graphql";
+import { withApollo } from "../utils/withApollo";
 
 const Index = () => {
-  const [variables, setVariables] = useState({
-    limit: 15,
-    cursor: null as null | string,
+  const { data, error, loading, fetchMore , variables } = usePostsQuery({
+    variables: {
+      limit: 15,
+      cursor: null as null | string,
+    },
   });
 
-  const [{ data, fetching }] = usePostsQuery({
-    variables,
-  });
-
-  if (!fetching && !data) {
+  if (!loading && !data) {
     return <div> query failed </div>;
   }
   return (
@@ -42,10 +39,10 @@ const Index = () => {
           </Flex>
         </NextLink>
 
-        {!data && fetching ? (
+        {!data && loading ? (
           <div>loading...</div>
         ) : (
-          <Stack spacing={8}>
+          <Stack spacing={8} style={{ backgroundColor: "#fff" }}>
             {!data
               ? null
               : data!.posts.posts.map((p) =>
@@ -56,7 +53,8 @@ const Index = () => {
                       border="1px solid #666"
                       borderRadius="5px"
                       padding="15px"
-                      key={p.id}
+                    key={p.id}
+                    backgroundColor={"white !important"}
                     >
                       <Box>
                         <Flex>
@@ -90,9 +88,33 @@ const Index = () => {
         <Flex>
           <Button
             onClick={() => [
-              setVariables({
-                limit: 5,
-                cursor: data.posts.posts[data.posts.posts.length - 1].createdAt,
+              fetchMore({
+                variables: {
+                  limit: variables?.limit,
+                  cursor:
+                    data.posts.posts[data.posts.posts.length - 1].createdAt,
+                },
+                // updateQuery: (
+                //   previousValue,
+                //   { fetchMoreResult }
+                // ): PostQuery => {
+                //   if (!fetchMoreResult) {
+                //     return previousValue as PostQuery
+                //   }
+
+                //   return {
+                //     __typename: "Query",
+                //     posts: {
+                //       __typename: "PaginatedPosts",
+                //       hasMore: (fetchMoreResult as PostQuery).post.hasMore,
+                //       posts: [
+                //         ...(previousValue as PostQuery).posts.posts,
+                //         ...(fetchMoreResult as PostQuery).post.posts
+                //       ]
+                //     }
+                //   }
+
+                // }
               }),
             ]}
             w={"100%"}
@@ -113,4 +135,4 @@ const Index = () => {
   );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(Index);
+export default withApollo({ ssr:true })(Index);

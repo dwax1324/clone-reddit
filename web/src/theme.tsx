@@ -8,7 +8,6 @@ const theme = {
   ...chakraTheme,
   colors: {
     ...chakraTheme.colors,
-    black: '#16161D',
   },
   fonts,
   breakpoints,
@@ -30,9 +29,9 @@ const theme = {
           />
         </svg>
       ),
-      viewBox: '0 0 3000 3163',
+      viewBox: "0 0 3000 3163",
     },
   },
-}
+};
 
 export default theme
